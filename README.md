@@ -44,4 +44,4 @@ func main() {
 }
 ```
 
-Refer [Litmus Docs](https://docs.litmuschaos.io/docs/chaosengine/) to Prepare the engine structure.
+Refer [Litmus Docs](https://docs.litmuschaos.io/docs) to Prepare the engine structure.
