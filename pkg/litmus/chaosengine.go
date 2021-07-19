@@ -5,9 +5,10 @@ import (
 	"github.com/uditgaurav/go-sdk-poc/pkg/clients"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
-func CreateChaosEngine(chaosEngine *v1alpha1.ChaosEngine, clients clients.ClientSets) (*v1alpha1.ChaosEngine, error) {
+func CreateChaosEngine(chaosEngine *v1alpha1.ChaosEngine, engineManifest CreateChaosEngineManifest, clients clients.ClientSets) (*v1alpha1.ChaosEngine, error) {
 
 	if chaosEngine.APIVersion == "" {
 		chaosEngine.APIVersion = "litmuschaos.io/v1alpha1"
@@ -24,11 +25,14 @@ func CreateChaosEngine(chaosEngine *v1alpha1.ChaosEngine, clients clients.Client
 	if chaosEngine.Spec.Components.Runner.ImagePullPolicy == "" {
 		chaosEngine.Spec.Components.Runner.ImagePullPolicy = corev1.PullPolicy("Always")
 	}
-
-	if chaosEngine.ObjectMeta.Name == "" {
+	if engineManifest.Name != "" {
+		chaosEngine.ObjectMeta.Name = engineManifest.Name
+	} else {
 		chaosEngine.ObjectMeta.Name = "nginx-chaos"
 	}
-	if chaosEngine.ObjectMeta.Namespace == "" {
+	if engineManifest.Namespace != "" {
+		chaosEngine.ObjectMeta.Namespace = engineManifest.Namespace
+	} else {
 		chaosEngine.ObjectMeta.Namespace = "default"
 	}
 	if chaosEngine.Spec.Appinfo.Appns == "" {
@@ -44,13 +48,20 @@ func CreateChaosEngine(chaosEngine *v1alpha1.ChaosEngine, clients clients.Client
 		chaosEngine.Spec.ChaosServiceAccount = "litmus-admin"
 	}
 	expList := v1alpha1.ExperimentList{}
-	expList.Name = "pod-delete"
+	if engineManifest.ExperimentName != "" {
+		expList.Name = engineManifest.ExperimentName
+	} else {
+		expList.Name = "pod-delete"
+	}
 	chaosEngine.Spec.Experiments = append(chaosEngine.Spec.Experiments, expList)
+	for key, value := range engineManifest.ENVs {
+		chaosEngine.Spec.Experiments[0].Spec.Components.ENV = append(chaosEngine.Spec.Experiments[0].Spec.Components.ENV, v1.EnvVar{Name: key, Value: value})
+	}
 	if chaosEngine.Spec.AnnotationCheck == "" {
 		chaosEngine.Spec.AnnotationCheck = "false"
 	}
 
-	resp, err := clients.LitmusClient.ChaosEngines("default").Create(chaosEngine)
+	resp, err := clients.LitmusClient.ChaosEngines(chaosEngine.Namespace).Create(chaosEngine)
 	if err != nil {
 		return resp, err
 	}

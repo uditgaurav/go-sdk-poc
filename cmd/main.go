@@ -7,7 +7,6 @@ import (
 	"github.com/uditgaurav/go-sdk-poc/pkg/clients"
 	"github.com/uditgaurav/go-sdk-poc/pkg/litmus"
 	"github.com/uditgaurav/go-sdk-poc/pkg/log"
-	v1 "k8s.io/api/core/v1"
 )
 
 func main() {
@@ -18,29 +17,17 @@ func main() {
 		return
 	}
 	chaosEngine := v1alpha1.ChaosEngine{}
+	engineManifest := litmus.CreateChaosEngineManifest{}
 
-	chaosEngine.Name = "my-chaos-test"
-	chaosEngine.Spec.JobCleanUpPolicy = v1alpha1.CleanUpPolicyRetain
+	engineManifest.Name = "my-chaos-test-name"
+	engineManifest.Namespace = "default"
+	engineManifest.JobCleanUpPolicy = v1alpha1.CleanUpPolicyRetain
+	engineManifest.ExperimentName = "pod-delete"
+	engineManifest.ENVs = make(map[string]string)
+	engineManifest.ENVs["TOTAL_CHAOS_DURATION"] = "120"
+	engineManifest.ENVs["CHAOS_INTERVAL"] = "30"
 
-	expList := v1alpha1.ExperimentList{}
-	expList.Name = "pod-delete"
-	env := []v1.EnvVar{
-		{
-			Name:  "TOTAL_CHAOS_DURATION",
-			Value: "120",
-		},
-		{
-			Name:  "CHAOS_INTERVAL",
-			Value: "30",
-		},
-	}
-
-	for i := range env {
-		expList.Spec.Components.ENV = append(expList.Spec.Components.ENV, env[i])
-	}
-	chaosEngine.Spec.Experiments = append(chaosEngine.Spec.Experiments, expList)
-
-	resp, err := litmus.CreateChaosEngine(&chaosEngine, clients)
+	resp, err := litmus.CreateChaosEngine(&chaosEngine, engineManifest, clients)
 	if err != nil {
 		log.Errorf("Error in creating chaos engine: %v", err)
 	}
